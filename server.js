@@ -14,16 +14,20 @@ app.use("/", router);
 // Start server
 app.listen(5000, () => console.log("🚀 Server running on port 5000"));
 
-// Log .env values (for debug only; remove in prod)
-console.log("Email User:", process.env.EMAIL_USER);
-console.log("Email Pass:", process.env.EMAIL_PASS ? "✅ Loaded" : "❌ Missing");
+// Hardcoded test credentials (DO NOT use in production or commit to GitHub!)
+const EMAIL_USER = "gk2792523@gmail.com";
+const EMAIL_PASS = "ohnsabajcfjzmycg";
+
+console.log("🔧 Using hardcoded Gmail credentials for testing:");
+console.log("→ Email User:", EMAIL_USER);
+console.log("→ Email Pass:", EMAIL_PASS ? "✅ Loaded" : "❌ Missing");
 
 // Nodemailer transporter
 const contactEmail = nodemailer.createTransport({
-  service: 'gmail',
+  service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,
   },
 });
 
@@ -35,20 +39,21 @@ contactEmail.verify((error) => {
     console.log("✅ Email transporter is ready to send messages");
   }
 });
+
 router.post("/contact", (req, res) => {
   const { firstName = "", lastName = "", email = "", message = "", phone = "" } = req.body;
   const name = `${firstName} ${lastName}`.trim();
 
-  console.log("📥 New contact form submission:");
+  console.log("📥 Received contact form submission:");
   console.log("→ Name:", name);
   console.log("→ Email:", email);
   console.log("→ Phone:", phone);
   console.log("→ Message:", message);
 
-  // Email to admin (you)
+  // Email to admin
   const adminMail = {
     from: `"${name}" <${email}>`,
-    to: process.env.EMAIL_USER,
+    to: EMAIL_USER,
     subject: "📨 Contact Form Submission - Portfolio",
     html: `
       <p><strong>Name:</strong> ${name}</p>
@@ -59,11 +64,11 @@ router.post("/contact", (req, res) => {
     `,
   };
 
-  // Email to user (confirmation)
+  // Email to user
   const userMail = {
-    from: `"Portfolio" <${process.env.EMAIL_USER}>`,
+    from: `"Portfolio" <${EMAIL_USER}>`,
     to: email,
-    replyTo: process.env.EMAIL_USER,
+    replyTo: EMAIL_USER,
     subject: "✅ We Received Your Message",
     html: `
       <p>Hi ${firstName},</p>
@@ -75,23 +80,33 @@ router.post("/contact", (req, res) => {
     `,
   };
 
-  console.log("📤 Sending email to admin:", adminMail.to);
+  console.log("📤 Sending admin email to:", EMAIL_USER);
   contactEmail.sendMail(adminMail, (adminErr, info) => {
     if (adminErr) {
       console.error("❌ Failed to send email to admin:", adminErr);
-      return res.status(500).json({ success: false, error: "Failed to send message to admin" });
+      return res.status(500).json({
+        success: false,
+        error: adminErr.message || "Failed to send message to admin",
+      });
     }
+
     console.log("✅ Email sent to admin:", info.response);
 
-    console.log("📤 Sending confirmation email to user:", userMail.to);
+    console.log("📤 Sending confirmation email to user:", email);
     contactEmail.sendMail(userMail, (userErr, info2) => {
       if (userErr) {
         console.error("❌ Failed to send confirmation to user:", userErr);
-        return res.status(500).json({ success: false, error: "Failed to send confirmation to user" });
+        return res.status(500).json({
+          success: false,
+          error: userErr.message || "Failed to send confirmation to user",
+        });
       }
 
       console.log("✅ Confirmation email sent to user:", info2.response);
-      res.status(200).json({ success: true, message: "Both emails sent successfully" });
+      return res.json({
+        success: true,
+        message: "Emails sent successfully to admin and user.",
+      });
     });
   });
 });
